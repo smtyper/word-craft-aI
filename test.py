@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import dataset
+import json
 
 from model import alphabetLetters, modelName, inputWordLen
 
@@ -20,6 +21,5 @@ for testInput in testInputs.keys():
 
     testInputs[testInput] = [(testInput + result).replace(" ", "")for result in results]
 
-    print()
-
-resultStr = "\n".join([f"{key}: {value}" for key, value in testInputs.items()])
+resultsJson = json.dumps(testInputs, ensure_ascii = False)
+print()

@@ -22,24 +22,26 @@ def getNounsWords(count = 1000000, minLen = 2, maxLen = 8) -> list[str]:
     return nouns
 
 
-def splitWords(words: list[str]) -> dict[str, list[str]]:
-    lengths = [i for i in range(3, 7)]
+def splitWords(words: list[str], wordsInGroupCount: int) -> list[tuple[str, list[str]]]:
+    def segmentize(group, segmentLength: int):
+        group = Query.en(group).to_list()
+        segments = [group[word:word + segmentLength] for word in range(0, len(group), segmentLength)]
+
+        return segments
+
+    lengths = [i for i in range(3, 4)]
 
     splittedWords: dict = (Query
             .en(lengths)
             .select_many(lambda length: (Query
                 .en(words)
                 .where(lambda word: len(word) > length)
-                .group_by(lambda word: word[:length])))
-            .to_dictionary(lambda group: group.key,
-                           lambda group: (Query
-                                          .en(group)
-                                          .select(lambda word: word[len(group.key):])
-                                        #   .group_by(lambda word: len(word))
-                                        #   .select_many(lambda lenGroup: Query.en(lenGroup).take(lenGroupWordCount))
-                                          .order_by_descending(lambda word: len(word))
-                                        #   .then_by(lambda word: word)
-                                          .to_list())))
+                .group_by(lambda word: word[:length])
+                .select_many(lambda group: Query
+                             .en(segmentize(group, wordsInGroupCount))
+                             .where(lambda segment: len(segment) == wordsInGroupCount)
+                             .select(lambda segment: (group.key, segment)))))
+            .to_list())
 
     return splittedWords
 
@@ -62,8 +64,7 @@ def toVectors(word: str, outputLen: int, alphabetLetters: str):
     return arrays
 
 
-def fitDataset(splittedWords: dict[str, list[str]],
-               indices: np.ndarray,
+def fitDataset(splittedWords: list[tuple[str, list[str]]],
                alphabetLetters: str,
                inputWordLen: int,
                outputWordCount: int,
@@ -71,10 +72,9 @@ def fitDataset(splittedWords: dict[str, list[str]],
                batchSize = 64, 
                epochs = 5):
     for _ in range(epochs):
-        setWords = splittedWords.items()
         inputs, outputs = [], []
 
-        for wordStart, wordEnds in setWords:
+        for wordStart, wordEnds in splittedWords:
             if len(inputs) == batchSize:
                 yield np.stack(inputs), np.stack(outputs)
                 inputs, outputs = [], []
