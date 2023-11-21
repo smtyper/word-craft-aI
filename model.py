@@ -5,59 +5,45 @@ from keras.models import Sequential
 from keras.layers import Input, LSTM, Dense, Reshape
 
 alphabetLetters = " абвгдеёжзийклмнопстуфхцчшщъыьэюя"
-inputWordLen = 6
+inputWordLen = 3
 
-outputWordCount = 60
+outputWordCount = 5
 outputWordLen = 15
+modelName = "v0.3"
 
-model = Sequential()
-model.add(Input(shape = (inputWordLen, len(alphabetLetters))))
+if __name__ == "__main__":
+    model = Sequential()
+    model.add(Input(shape = (inputWordLen, len(alphabetLetters))))
 
-model.add(LSTM(256, return_sequences = True))
-model.add(LSTM(512, return_sequences = True))
-model.add(LSTM(512))
+    model.add(LSTM(256, return_sequences = True))
+    model.add(LSTM(512, return_sequences = True))
+    model.add(LSTM(512))
 
-model.add(Dense(512, activation = "relu"))
-model.add(Dense(outputWordCount * outputWordLen * len(alphabetLetters), activation = "softmax"))
+    model.add(Dense(512, activation = "relu"))
+    model.add(Dense(outputWordCount * outputWordLen * len(alphabetLetters), activation = "softmax"))
 
-model.add(Reshape((outputWordCount, outputWordLen, len(alphabetLetters))))
+    model.add(Reshape((outputWordCount, outputWordLen, len(alphabetLetters))))
 
-model.compile(optimizer = "adam", 
-              loss = "categorical_crossentropy",
-              metrics = ["accuracy"])
-model.summary()
+    model.compile(optimizer = "adam", 
+                loss = "categorical_crossentropy",
+                metrics = ["accuracy"])
+    model.summary()
 
-batch_size = 64
-epochs = 10
+    batch_size = 64
+    epochs = 1
 
-nouns = dataset.getNounsWords(minLen = 5, maxLen = 10)
-splittedWords = dataset.splitWords(nouns)
-trainingIndices, testIndices = dataset.getSetsIndices(len(splittedWords), training_set_percent = 1)
-trainingSet = dataset.fitDataset(splittedWords, trainingIndices, alphabetLetters, inputWordLen, outputWordCount,
-                                 outputWordLen,
-                                 batchSize = 64,
-                                 epochs = epochs)
+    nouns = dataset.getNounsWords(minLen = 5, maxLen = 10)
+    splittedWords = dataset.splitWords(nouns)
+    trainingIndices, _ = dataset.getSetsIndices(len(splittedWords), training_set_percent = 1)
+    trainingSet = dataset.fitDataset(splittedWords, trainingIndices, alphabetLetters, inputWordLen, outputWordCount,
+                                    outputWordLen,
+                                    batchSize = 64,
+                                    epochs = epochs)
 
 
-history = model.fit(trainingSet,
-                    steps_per_epoch = len(trainingIndices) // batch_size,
-                    epochs = epochs)
-                    # validation_data = testSet,
-                    # validation_steps = len(testIndices) // batch_size)
-
-testInputs = {"авт": "", "агр": "", "адм": "", "азб": "", "ази": "", "акт": "", "але": "", "алм": "", "алф": "", "амб": "", "амф": "", "анг": "", "ант": "", "апт": "", "арб": "", "арк": "", "арм": "", "арт": "", "асп": "", "аст": "", "ато": "", "ауд": "", "аук": "", "бак": "", "бал": "", "бан": "", "бар": "", "бас": "", "бат": "", "бег": "", "бед": "", "без": "", "бел": "", "бер": "", "бес": "", "бил": "", "бир": "", "бис": "", "бит": "", "бле": "", "бли": "", "бло": "", "блю": "", "бог": "", "бод": "", "бок": "", "бол": "", "бом": "", "бор": "", "бот": "", "боя": "", "бре": "", "бри": "", "бро": "", "бру": "", "буд": "", "бук": "", "бур": "", "бут": "", "ваг": "", "вал": "", "ван": "", "вар": "", "вас": "", "ват": "", "вах": "", "век": "", "вел": "", "вен": "", "вер": "", "вес": "", "вет": "", "вид": "", "виз": "", "вил": "", "вин": "", "вис": "", "вит": "", "вих": "", "вкл": "", "вла": "", "вли": "", "вло": "", "вну": "", "вод": "", "вой": "", "вок": "", "вол": "", "воп": "", "вос": "", "вот": "", "выб": "", "выг": "", "выд": "", "вым": "", "вып": "", "выс": "", "выт": "", "выш": "", "гад": "",}
-
-for testInput in testInputs.keys():
-    testInputVector = dataset.toVectors(testInput, 3, alphabetLetters)
-    testInputBatch = np.stack([testInputVector])
-
-    prediction = model.predict(testInputBatch)[0]
-    result = "".join([alphabetLetters[np.argmax(charVector)] for charVector in prediction])
-
-    testInputs[testInput] = (testInput + result[3:]).replace(" ", "")
-
-    print()
-
-resultStr = "\n".join([f"{key}: {value}" for key, value in testInputs.items()])
-
-print()
+    history = model.fit(trainingSet,
+                        steps_per_epoch = len(trainingIndices) // batch_size,
+                        epochs = epochs)
+                        # validation_data = testSet,
+                        # validation_steps = len(testIndices) // batch_size)
+    model.save(modelName, overwrite = True)

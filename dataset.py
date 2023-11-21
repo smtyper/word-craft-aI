@@ -6,7 +6,7 @@ from keras.utils import to_categorical
 from yo_fluq import Query
 
 
-def getNounsWords(count = 1000000, minLen = 2, maxLen = 15) -> list[str]:
+def getNounsWords(count = 1000000, minLen = 2, maxLen = 8) -> list[str]:
     nounsFilePath = os.path.join("data", "nouns.csv")
 
     def hasDuplicateChars(string):
@@ -22,8 +22,8 @@ def getNounsWords(count = 1000000, minLen = 2, maxLen = 15) -> list[str]:
     return nouns
 
 
-def splitWords(words: list[str], lenGroupWordCount = 10) -> dict[str, list[str]]:
-    lengths = [i for i in range(1, 7)]
+def splitWords(words: list[str]) -> dict[str, list[str]]:
+    lengths = [i for i in range(3, 7)]
 
     splittedWords: dict = (Query
             .en(lengths)
@@ -35,10 +35,10 @@ def splitWords(words: list[str], lenGroupWordCount = 10) -> dict[str, list[str]]
                            lambda group: (Query
                                           .en(group)
                                           .select(lambda word: word[len(group.key):])
-                                          .group_by(lambda word: len(word))
-                                          .select_many(lambda lenGroup: Query.en(lenGroup).take(lenGroupWordCount))
-                                          .order_by(lambda word: len(word))
-                                          .then_by(lambda word: word)
+                                        #   .group_by(lambda word: len(word))
+                                        #   .select_many(lambda lenGroup: Query.en(lenGroup).take(lenGroupWordCount))
+                                          .order_by_descending(lambda word: len(word))
+                                        #   .then_by(lambda word: word)
                                           .to_list())))
 
     return splittedWords
@@ -80,9 +80,12 @@ def fitDataset(splittedWords: dict[str, list[str]],
                 inputs, outputs = [], []
 
             inputWord = toVectors(wordStart, inputWordLen, alphabetLetters)
-            temp = [toVectors(wordEnds[wordEndIndex], outputWordLen, alphabetLetters) if wordEndIndex < len(wordEnds)
-                    for wordEndIndex in outputWordCount]
-            outputWords = np.stack([toVectors(wordEnd, outputWordLen, alphabetLetters) for wordEnd in wordEnds])
+            outputWords = [np.stack(toVectors(wordEnds[wordIndex] if wordIndex < len(wordEnds) else "", outputWordLen,
+                                              alphabetLetters))for wordIndex in range(outputWordCount)]
+
+            # temp = [wordEnds[wordIndex] if wordIndex < len(wordEnds) else "" for wordIndex in range(outputWordCount)]
+
+            # print(max(temp, key = lambda word: len(word)))
 
             inputs.append(inputWord)
             outputs.append(outputWords)
